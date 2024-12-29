@@ -1,12 +1,13 @@
 # XNull Word Filtering Bot
 
-A powerful Discord word filtering bot with fuzzy matching capabilities to catch attempted filter bypasses.
+A powerful Discord word filtering bot with fuzzy matching capabilities to catch attempted filter bypasses and user-specific filtering.
 
 Visit [xnull.eu](https://www.xnull.eu) for more projects and tools!
 
 ## Features
 
-- Word filtering with fuzzy matching
+- Word and sentence filtering with fuzzy matching
+- Global and user-specific filters
 - Similarity threshold control
 - Multiple word filtering
 - Bypass protection
@@ -17,16 +18,27 @@ Visit [xnull.eu](https://www.xnull.eu) for more projects and tools!
 ## Commands
 
 - `??help` - Shows all available commands
-- `??filter [words]` - Set words to filter (comma-separated) (Admin only)
+- `??filter [words]` - Set global filter words (Admin only)
 - `??fwords` - Display currently filtered words
 - `??similarity [value]` - Show or change similarity threshold (Admin only)
+- `??ufilter @user [words]` - Set filters for specific users (Admin only)
+- `??uwords [@user]` - Show filters for all users or specific user (Admin only)
+- `??reset` - Clear all global filter words (Admin only)
+- `??ureset [@users]` - Clear filters for specific or all users (Admin only)
 
 ## How It Works
 
 ### Word Filtering
-- Filters individual words or exact phrases
+- Filters individual words and sentences
 - Supports multiple words (separated by commas)
 - Example: `??filter water, bad, test`
+- Detects filtered words within sentences (e.g., "I drink water" gets deleted if "water" is filtered)
+
+### User-Specific Filtering
+- Set filters for individual users
+- Manage filters separately from global filters
+- Example: `??ufilter @user water, bad`
+- Reset filters for specific users or all users
 
 ### Similarity Detection
 - Default similarity threshold: 50
@@ -36,11 +48,11 @@ Visit [xnull.eu](https://www.xnull.eu) for more projects and tools!
 
 ### Examples
 - Filtering "water":
-  - Will catch: "water", "wat3r", "w@ter"
+  - Will catch: "water", "wat3r", "w@ter", "I drink water", "I drink w@t3r"
   - Won't catch: "waterfall", "underwater"
 - Filtering exact phrases:
   - Use: `??filter this is a sentence`
-  - Will only catch the exact phrase
+  - Will catch the exact phrase and similar variations
 
 ## Requirements
 
@@ -121,4 +133,3 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [discord.py](https://github.com/Rapptz/discord.py) - Discord API wrapper
 - [fuzzywuzzy](https://github.com/seatgeek/fuzzywuzzy) - Fuzzy string matching
 - [python-Levenshtein](https://github.com/ztane/python-Levenshtein/) - Fast string matching computations
-
