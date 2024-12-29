@@ -14,13 +14,13 @@ bot = commands.Bot(command_prefix=PREFIX, intents=intents)
 # Remove the default help command
 bot.remove_command('help')
 
-# List of words to filter, initially empty
+# List of words to filter globally
 filter_words = []
+# Dictionary for user-specific filters
+user_filters = {}
 
-# Message to display in the command prompt
 print(f"SIMILARITY_THRESHOLD is set to {SIMILARITY_THRESHOLD}. It is recommended to keep it at this value for optimal filtering.")
 
-# At the start of the script, before getting the bot token
 print("=== XNull Word Filtering Bot ===")
 print("\nVisit https://www.xnull.eu for more projects and tools!")
 
@@ -63,100 +63,133 @@ async def on_ready():
 
 @bot.event
 async def on_message(message):
-    # Check if the message is from a bot
     if message.author.bot:
         return
 
-    # Filter messages based on current patterns
-    for pattern in filter_words:
-        if fuzz.ratio(message.content.lower(), pattern.strip().lower()) >= SIMILARITY_THRESHOLD:
-            await message.delete()
-            break  # Exit the loop once a match is found
+    message_content_lower = message.content.lower()
+    message_words = message_content_lower.split()
 
-    # Process other commands
+    # Check global filter words
+    for word in filter_words:
+        word_lower = word.lower()
+        if word_lower in message_content_lower:
+            await message.delete()
+            break
+        for msg_word in message_words:
+            if fuzz.ratio(msg_word, word_lower) >= SIMILARITY_THRESHOLD:
+                await message.delete()
+                return
+
+    # Check user-specific filter words if they exist
+    user_specific_words = user_filters.get(message.author.id, [])
+    for word in user_specific_words:
+        word_lower = word.lower()
+        if word_lower in message_content_lower:
+            await message.delete()
+            break
+        for msg_word in message_words:
+            if fuzz.ratio(msg_word, word_lower) >= SIMILARITY_THRESHOLD:
+                await message.delete()
+                return
+
     await bot.process_commands(message)
 
-@bot.command(name="filter", help="Changes the words being filtered. (Admin only) Usage: ??filter word1, word2, word3")
+@bot.command(name="filter", help="Sets global filter words. (Admin only) Usage: ??filter word1, word2")
 @has_permissions(administrator=True)
 async def change_filter_words(ctx, *, words):
-    """
-    This command updates the filtered words and the bot's activity dynamically.
-    Only users with the Administrator permission can use this command.
-    Usage: ??filter example1, example2, example3
-    """
     global filter_words
-
-    # Split the words by commas and update the filter list
     filter_words = [word.strip() for word in words.split(',')]
-
-    # Update bot's activity to reflect the new filter words
-    filtered_words_display = ', '.join(filter_words)
-    activity = discord.Game(name=f"Filtering: {filtered_words_display}")
+    activity = discord.Game(name="Type ??fwords to see filtered words") if filter_words else discord.Game(name="No filters set")
     await bot.change_presence(status=discord.Status.online, activity=activity)
+    await ctx.send(f"Global filter words updated to: {', '.join(filter_words)}")
 
-    # Let the user know the filter words were updated
-    await ctx.send(f"Filter words updated to: {filtered_words_display}")
-    print(f"Filter words updated to: {filtered_words_display}")
+@bot.command(name="ufilter", help="Sets filter words for a specific user. (Admin only) Usage: ??ufilter @user word1, word2")
+@has_permissions(administrator=True)
+async def user_filter_words(ctx, user: discord.Member, *, words):
+    user_filters[user.id] = [word.strip() for word in words.split(',')]
+    await ctx.send(f"Custom filter words for {user.mention} updated to: {', '.join(user_filters[user.id])}")
 
-@change_filter_words.error
-async def change_filter_words_error(ctx, error):
-    """
-    Error handling for the ??filter command.
-    If a user without Administrator permission tries to use the command, this will notify them.
-    """
-    if isinstance(error, CheckFailure):
-        await ctx.send("You do not have permission to use this command. Only administrators can change the filter words.")
-
-@bot.command(name="fwords", help="Displays the currently filtered words. Usage: ??fwords")
-async def show_filter_words(ctx):
-    """
-    This command shows the currently set filter words.
-    Usage: ??fwords
-    """
+@bot.command(name="fwords", help="Displays the global filter words. Usage: ??fwords")
+async def show_global_filter_words(ctx):
     if filter_words:
-        filtered_words_display = ', '.join(filter_words)
-        await ctx.send(f"Currently filtered words: {filtered_words_display}")
+        message = f"Global filter words: {', '.join(filter_words)}"
     else:
-        await ctx.send("No words are currently being filtered.")
+        message = "No global filter words set."
+    await ctx.send(message)
+
+@bot.command(name="uwords", help="Displays filter words for all users or a specific user. (Admin only) Usage: ??uwords or ??uwords @user")
+@has_permissions(administrator=True)
+async def show_user_filter_words(ctx, user: discord.Member = None):
+    if user:
+        # Display filter words for the specified user
+        user_words = user_filters.get(user.id, [])
+        if user_words:
+            message = f"Filter words for {user.mention}: {', '.join(user_words)}"
+        else:
+            message = f"No filter words set for {user.mention}."
+    else:
+        # Display filter words for all users
+        if user_filters:
+            message = "User-specific filters:\n"
+            user_filter_messages = [
+                f"{await bot.fetch_user(user_id)}: {', '.join(words)}" if words else f"{await bot.fetch_user(user_id)}: No words set"
+                for user_id, words in user_filters.items()
+            ]
+            message += "\n".join(user_filter_messages)
+        else:
+            message = "No user-specific filter words set."
+
+    await ctx.send(message)
+
+@bot.command(name="reset", help="Clears all global filter words. (Admin only) Usage: ??reset")
+@has_permissions(administrator=True)
+async def reset_global_filter(ctx):
+    global filter_words
+    filter_words.clear()
+    await bot.change_presence(status=discord.Status.online, activity=discord.Game(name="No filters set"))
+    await ctx.send("Global filter words have been reset.")
+    print("Global filter words reset.")
+
+@bot.command(name="ureset", help="Clears all filters for specific users or all users. (Admin only) Usage: ??ureset @user1 @user2 or ??ureset")
+@has_permissions(administrator=True)
+async def reset_user_filters(ctx, *users: discord.Member):
+    if users:
+        for user in users:
+            if user.id in user_filters:
+                del user_filters[user.id]
+        user_mentions = ', '.join(user.mention for user in users)
+        await ctx.send(f"Filter words for the specified users ({user_mentions}) have been reset.")
+        print(f"User-specific filters reset for: {user_mentions}")
+    else:
+        user_filters.clear()
+        await ctx.send("All user-specific filter words have been reset.")
+        print("All user-specific filters reset.")
 
 @bot.command(name="similarity", help="Changes the similarity threshold. (Admin only) Usage: ??similarity <value>")
 @has_permissions(administrator=True)
 async def change_similarity_threshold(ctx, new_threshold: int = None):
-    """
-    This command changes or shows the current similarity threshold.
-    Only administrators can change the threshold.
-    Usage: ??similarity <value>
-    """
     global SIMILARITY_THRESHOLD
-
     if new_threshold is None:
-        # If no new value is provided, show the current threshold
         await ctx.send(f"Current similarity threshold is {SIMILARITY_THRESHOLD}.")
     else:
-        # Update the similarity threshold
         SIMILARITY_THRESHOLD = new_threshold
         await ctx.send(f"Similarity threshold updated to {SIMILARITY_THRESHOLD}.")
         print(f"Similarity threshold updated to {SIMILARITY_THRESHOLD}.")
 
+@change_filter_words.error
+@user_filter_words.error
+@reset_global_filter.error
+@reset_user_filters.error
 @change_similarity_threshold.error
-async def change_similarity_threshold_error(ctx, error):
-    """
-    Error handling for the ??similarity command.
-    If a user without Administrator permission tries to use the command, this will notify them.
-    """
+async def admin_command_error(ctx, error):
     if isinstance(error, CheckFailure):
-        await ctx.send("You do not have permission to use this command. Only administrators can change the similarity threshold.")
+        await ctx.send("You do not have permission to use this command. Only administrators can change filter settings.")
 
-# Custom help command
 @bot.command(name='help', help="Displays all available commands. Usage: ??help")
 async def help_command(ctx):
-    """
-    Custom help command that displays all available commands.
-    """
     embed = discord.Embed(title="Available Commands", color=discord.Color.blue())
-    
     for command in bot.commands:
-        if not command.hidden:  # Avoid showing hidden commands
+        if not command.hidden:
             embed.add_field(name=f"??{command.name}", value=command.help, inline=False)
     
     # Add footer text
@@ -164,16 +197,13 @@ async def help_command(ctx):
     
     await ctx.send(embed=embed)
 
-# Ask the user for the bot token and initial filter words at runtime
 bot_token = input("Please enter your bot token: ")
 initial_filter_words = input("Please enter initial words to filter, separated by commas (or leave blank for none): ")
 
-# If the user provides initial words, populate the filter_words list
 if initial_filter_words:
     filter_words = [word.strip() for word in initial_filter_words.split(',')]
     print(f"Initial filter words set to: {', '.join(filter_words)}")
 else:
     print("No initial filter words set.")
 
-# Run the bot
 bot.run(bot_token)
