@@ -70,12 +70,24 @@ Visit [xnull.eu](https://www.xnull.eu) for more projects and tools!
 
 4. Run the bot:
     ```
-    python "XNull Word Filtering Bot.py"
+    python "main.py"
     ```
     
 5. Enter your bot token when prompted
 6. Enter any initial filter words (optional)
 7. Use the bot's invite link to add it to your server
+
+## Building Executable
+
+To create a standalone executable:
+
+1. Install requirements
+2. Run the build script:
+    ```
+    python build.py
+    ```
+
+3. Find the executable in the `dist` folder
 
 ## Features in Detail
 
@@ -109,3 +121,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [discord.py](https://github.com/Rapptz/discord.py) - Discord API wrapper
 - [fuzzywuzzy](https://github.com/seatgeek/fuzzywuzzy) - Fuzzy string matching
 - [python-Levenshtein](https://github.com/ztane/python-Levenshtein/) - Fast string matching computations
+
