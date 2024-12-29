@@ -17,14 +17,14 @@ Visit [xnull.eu](https://www.xnull.eu) for more projects and tools!
 
 ## Commands
 
-- `??help` - Shows all available commands
-- `??filter [words]` - Set global filter words (Admin only)
-- `??fwords` - Display currently filtered words
-- `??similarity [value]` - Show or change similarity threshold (Admin only)
-- `??ufilter @user [words]` - Set filters for specific users (Admin only)
-- `??uwords [@user]` - Show filters for all users or specific user (Admin only)
-- `??reset` - Clear all global filter words (Admin only)
-- `??ureset [@users]` - Clear filters for specific or all users (Admin only)
+- `/help` - Shows all available commands
+- `/filter [words]` - Set global filter words (Admin only)
+- `/fwords` - Display currently filtered words
+- `/similarity [value]` - Show or change similarity threshold (Admin only)
+- `/ufilter @user [words]` - Set filters for specific users (Admin only)
+- `/uwords [@user]` - Show filters for all users or specific user (Admin only)
+- `/reset` - Clear all global filter words (Admin only)
+- `/ureset [@users]` - Clear filters for specific or all users (Admin only)
 
 ## How It Works
 
